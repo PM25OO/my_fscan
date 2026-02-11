@@ -3,9 +3,6 @@ package lib
 import (
 	"crypto/md5"
 	"fmt"
-	"github.com/google/cel-go/cel"
-	"github.com/shadow1ng/fscan/Common"
-	"github.com/shadow1ng/fscan/WebScan/info"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -13,6 +10,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/cel-go/cel"
+	"github.com/shadow1ng/fscan/Common"
+	"github.com/shadow1ng/fscan/WebScan/info"
 )
 
 // API配置常量
@@ -57,8 +58,8 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 			defer wg.Done()
 			// 从任务通道循环获取任务
 			for task := range tasks {
-				// 执行POC检测，返回是否存在漏洞、错误信息和漏洞名称
-				isVulnerable, err, vulName := executePoc(task.Req, task.Poc)
+				// 执行POC检测，返回是否存在漏洞、错误信息、漏洞名称和利用参数
+				isVulnerable, err, vulName, exploitParams := executePoc(task.Req, task.Poc)
 
 				// 处理执行过程中的错误
 				if err != nil {
@@ -68,11 +69,18 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 
 				// 仅当通过普通POC规则(非clusterpoc)检测到漏洞时，才创建结果
 				// 因为clusterpoc已在内部处理了漏洞输出
-				if isVulnerable && vulName != "" {
+				// 注意：vulName为空表示使用Rules（非Groups），此时用POC名称作为漏洞名称
+				if isVulnerable {
+					// 确定漏洞名称
+					displayVulName := vulName
+					if displayVulName == "" {
+						displayVulName = task.Poc.Name
+					}
+
 					// 构造漏洞详细信息
 					details := make(map[string]interface{})
 					details["vulnerability_type"] = task.Poc.Name
-					details["vulnerability_name"] = vulName
+					details["vulnerability_name"] = displayVulName
 
 					// 添加作者信息（如果有）
 					if task.Poc.Detail.Author != "" {
@@ -87,6 +95,15 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 					// 添加漏洞描述（如果有）
 					if task.Poc.Detail.Description != "" {
 						details["description"] = task.Poc.Detail.Description
+					}
+
+					// 添加利用参数信息（如果有）
+					if len(exploitParams) > 0 {
+						paramMap := make(map[string]string)
+						for _, item := range exploitParams {
+							paramMap[item.Key] = item.Value
+						}
+						details["exploit_params"] = paramMap
 					}
 
 					// 创建并保存扫描结果
@@ -118,6 +135,13 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 					// 添加描述信息到日志
 					if task.Poc.Detail.Description != "" {
 						logMsg += "\n\t描述:" + task.Poc.Detail.Description
+					}
+
+					// 添加利用参数到日志（格式化输出）
+					if len(exploitParams) > 0 {
+						for _, param := range exploitParams {
+							logMsg += fmt.Sprintf("\n    * %s: %s", param.Key, param.Value)
+						}
 					}
 
 					// 输出成功日志
@@ -192,7 +216,8 @@ func buildLogMessage(result *VulnResult) string {
 }
 
 // executePoc 执行单个POC检测
-func executePoc(oReq *http.Request, p *Poc) (bool, error, string) {
+// 返回值: 是否存在漏洞, 错误信息, 漏洞名称, 利用参数
+func executePoc(oReq *http.Request, p *Poc) (bool, error, string, StrMap) {
 	// 初始化环境配置
 	config := NewEnvOption()
 	config.UpdateCompileOptions(p.Set)
@@ -213,13 +238,13 @@ func executePoc(oReq *http.Request, p *Poc) (bool, error, string) {
 	// 创建执行环境
 	env, err := NewEnv(&config)
 	if err != nil {
-		return false, fmt.Errorf("执行环境错误 %s: %v", p.Name, err), ""
+		return false, fmt.Errorf("执行环境错误 %s: %v", p.Name, err), "", nil
 	}
 
 	// 解析请求
 	req, err := ParseRequest(oReq)
 	if err != nil {
-		return false, fmt.Errorf("请求解析错误 %s: %v", p.Name, err), ""
+		return false, fmt.Errorf("请求解析错误 %s: %v", p.Name, err), "", nil
 	}
 
 	// 初始化变量映射
@@ -232,7 +257,7 @@ func executePoc(oReq *http.Request, p *Poc) (bool, error, string) {
 		key, expression := item.Key, item.Value
 		if expression == "newReverse()" {
 			if !Common.DnsLog {
-				return false, nil, ""
+				return false, nil, "", nil
 			}
 			variableMap[key] = newReverse()
 			continue
@@ -245,14 +270,15 @@ func executePoc(oReq *http.Request, p *Poc) (bool, error, string) {
 	// 处理爆破模式
 	if len(p.Sets) > 0 {
 		success, err := clusterpoc(oReq, p, variableMap, req, env)
-		return success, err, ""
+		return success, err, "", nil
 	}
 
 	return executeRules(oReq, p, variableMap, req, env)
 }
 
 // executeRules 执行POC规则并返回结果
-func executeRules(oReq *http.Request, p *Poc, variableMap map[string]interface{}, req *Request, env *cel.Env) (bool, error, string) {
+// 返回值: 是否成功, 错误信息, 漏洞名称, 利用参数
+func executeRules(oReq *http.Request, p *Poc, variableMap map[string]interface{}, req *Request, env *cel.Env) (bool, error, string, StrMap) {
 	// 处理单个规则的函数
 	executeRule := func(rule Rules) (bool, error) {
 		Headers := cloneMap(rule.Headers)
@@ -348,17 +374,116 @@ func executeRules(oReq *http.Request, p *Poc, variableMap map[string]interface{}
 	success := false
 	if len(p.Rules) > 0 {
 		success = executeRuleSet(p.Rules)
-		return success, nil, ""
+		if success {
+			// 提取利用参数
+			exploitParams := extractExploitParams(p, variableMap)
+			return success, nil, "", exploitParams
+		}
+		return success, nil, "", nil
 	} else {
 		for _, item := range p.Groups {
 			name, rules := item.Key, item.Value
 			if success = executeRuleSet(rules); success {
-				return true, nil, name
+				// 提取利用参数
+				exploitParams := extractExploitParams(p, variableMap)
+				return true, nil, name, exploitParams
 			}
 		}
 	}
 
-	return false, nil, ""
+	return false, nil, "", nil
+}
+
+// extractExploitParams 从变量映射中提取利用参数
+// 根据POC的set字段定义的变量名，提取对应的值作为利用参数
+// 同时尝试从规则路径中推断更有意义的参数名称
+func extractExploitParams(p *Poc, variableMap map[string]interface{}) StrMap {
+	var params StrMap
+
+	// 需要排除的内置变量名
+	excludeKeys := map[string]bool{
+		"request":  true,
+		"response": true,
+	}
+
+	// 从规则路径中提取变量到参数名的映射
+	// 例如: username={{r1}} 会映射 r1 -> username
+	varNameMapping := extractVarNameMapping(p)
+
+	// 遍历POC中定义的set变量
+	for _, item := range p.Set {
+		key := item.Key
+		// 跳过内置变量
+		if excludeKeys[key] {
+			continue
+		}
+		// 检查变量映射中是否存在该变量
+		if value, ok := variableMap[key]; ok {
+			// 跳过map类型和特殊类型
+			switch v := value.(type) {
+			case *Reverse:
+				continue
+			case map[string]string:
+				continue
+			case *Request:
+				continue
+			case *Response:
+				continue
+			default:
+				strValue := fmt.Sprintf("%v", v)
+				// 只添加有意义的值
+				if strValue != "" && strValue != "<nil>" {
+					// 使用映射后的参数名，如果没有映射则使用原始变量名
+					displayName := key
+					if mappedName, exists := varNameMapping[key]; exists {
+						displayName = mappedName
+					}
+					params = append(params, StrItem{Key: displayName, Value: strValue})
+				}
+			}
+		}
+	}
+
+	return params
+}
+
+// extractVarNameMapping 从POC规则中提取变量到参数名的映射
+// 例如从 path="/nacos/v1/auth/users?username={{r1}}&password={{r2}}" 中
+// 提取出 r1->username, r2->password 的映射
+func extractVarNameMapping(p *Poc) map[string]string {
+	mapping := make(map[string]string)
+
+	// 匹配 paramName={{varName}} 或 paramName={{varName}} 形式的模式
+	// 支持 URL 查询参数和请求体中的变量
+	patterns := []string{
+		`(\w+)=\{\{(\w+)\}\}`,          // 匹配 key={{var}} 格式
+		`"(\w+)":\s*"?\{\{(\w+)\}\}"?`, // 匹配 JSON 格式 "key": "{{var}}"
+	}
+
+	// 需要扫描的字符串来源
+	var sources []string
+	for _, rule := range p.Rules {
+		sources = append(sources, rule.Path, rule.Body)
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		for _, source := range sources {
+			matches := re.FindAllStringSubmatch(source, -1)
+			for _, match := range matches {
+				if len(match) >= 3 {
+					paramName := match[1]
+					varName := match[2]
+					// 只在还没有映射时添加（保留第一次出现的映射）
+					if _, exists := mapping[varName]; !exists {
+						mapping[varName] = paramName
+					}
+				}
+			}
+		}
+	}
+
+	return mapping
 }
 
 // doSearch 在响应体中执行正则匹配并提取命名捕获组
@@ -505,12 +630,14 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 			Common.SaveResult(result)
 		}
 
-		// 生成日志消息
-		var logMsg string
-		if p.Name == "poc-yaml-backup-file" || p.Name == "poc-yaml-sql-file" {
-			logMsg = fmt.Sprintf("检测到漏洞 %s %s", targetURL, p.Name)
-		} else {
-			logMsg = fmt.Sprintf("检测到漏洞 %s %s 参数:%v", targetURL, p.Name, params)
+		// 生成日志消息（新格式）
+		logMsg := fmt.Sprintf("\nPocScan %s %s", targetURL, p.Name)
+
+		// 格式化输出利用参数
+		if p.Name != "poc-yaml-backup-file" && p.Name != "poc-yaml-sql-file" && len(params) > 0 {
+			for _, param := range params {
+				logMsg += fmt.Sprintf("\n    * %s: %s", param.Key, param.Value)
+			}
 		}
 
 		// 输出成功日志
