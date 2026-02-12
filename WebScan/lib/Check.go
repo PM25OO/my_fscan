@@ -631,12 +631,12 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 		}
 
 		// 生成日志消息（新格式）
-		logMsg := fmt.Sprintf("\nPocScan %s %s", targetURL, p.Name)
+		logMsg := fmt.Sprintf("PocScan %s %s", targetURL, p.Name)
 
 		// 格式化输出利用参数
 		if p.Name != "poc-yaml-backup-file" && p.Name != "poc-yaml-sql-file" && len(params) > 0 {
 			for _, param := range params {
-				logMsg += fmt.Sprintf("\n    * %s: %s", param.Key, param.Value)
+				logMsg += fmt.Sprintf("\n* %s: %s", param.Key, param.Value)
 			}
 		}
 
