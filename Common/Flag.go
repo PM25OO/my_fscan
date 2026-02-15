@@ -117,6 +117,8 @@ func Flag(Info *HostInfo) {
 	flag.BoolVar(&DnsLog, "dns", false, GetText("flag_dns_log"))
 	flag.IntVar(&PocNum, "num", 20, GetText("flag_poc_num"))
 	flag.BoolVar(&DisablePocScan, "nopoc", false, GetText("flag_no_poc"))
+	flag.BoolVar(&EnableExpGeneration, "expgen", false, GetText("flag_exp_gen"))
+	flag.StringVar(&ExpOutputDir, "expdir", "exp_templates", GetText("flag_exp_dir"))
 
 	// ═════════════════════════════════════════════════
 	// Redis利用参数
@@ -218,6 +220,8 @@ func FlagFromRemote(info *HostInfo, argString string) error {
 	fs.BoolVar(&DnsLog, "dns", false, GetText("flag_dns_log"))
 	fs.IntVar(&PocNum, "num", 20, GetText("flag_poc_num"))
 	fs.BoolVar(&DisablePocScan, "nopoc", false, GetText("flag_no_poc"))
+	fs.BoolVar(&EnableExpGeneration, "expgen", false, GetText("flag_exp_gen"))
+	fs.StringVar(&ExpOutputDir, "expdir", "exp_templates", GetText("flag_exp_dir"))
 
 	fs.StringVar(&RedisFile, "rf", "", GetText("flag_redis_file"))
 	fs.StringVar(&RedisShell, "rs", "", GetText("flag_redis_shell"))

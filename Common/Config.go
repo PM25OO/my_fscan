@@ -1,8 +1,9 @@
 package Common
 
 import (
-	"github.com/schollz/progressbar/v3"
 	"sync"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 var version = "2.0.1"
@@ -925,9 +926,11 @@ var (
 	// POC与漏洞利用配置
 	// =========================================================
 	// POC配置
-	PocPath        string  // POC脚本路径
-	Pocinfo        PocInfo // POC详细信息结构
-	DisablePocScan bool    //nopoc
+	PocPath             string  // POC脚本路径
+	Pocinfo             PocInfo // POC详细信息结构
+	DisablePocScan      bool    //nopoc
+	EnableExpGeneration bool    // 是否在POC验证成功后自动生成EXP脚本模板
+	ExpOutputDir        string  // EXP脚本模板输出目录
 
 	// Redis利用
 	RedisFile         string // Redis利用目标文件
@@ -957,7 +960,7 @@ var (
 	ShowScanPlan  bool   // 是否显示扫描计划详情
 	SlowLogOutput bool   // 是否启用慢速日志输出
 	Language      string // 界面语言设置
-	ApiAddr      string // API地址
+	ApiAddr       string // API地址
 	SecretKey     string // 加密密钥
 )
 

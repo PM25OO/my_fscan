@@ -517,6 +517,20 @@ var i18nMap = map[string]map[string]string{
 		LangRU: "Отключить POC-сканирование",
 	},
 
+	"flag_exp_gen": {
+		LangZH: "POC验证成功后自动生成EXP脚本模板",
+		LangEN: "Auto-generate EXP script templates after POC verification",
+		LangJA: "POC検証成功後にEXPスクリプトテンプレートを自動生成",
+		LangRU: "Автоматически генерировать шаблоны EXP-скриптов после проверки POC",
+	},
+
+	"flag_exp_dir": {
+		LangZH: "EXP脚本模板输出目录(默认: exp_templates)",
+		LangEN: "EXP script template output directory (default: exp_templates)",
+		LangJA: "EXPスクリプトテンプレートの出力ディレクトリ（デフォルト: exp_templates）",
+		LangRU: "Каталог для вывода шаблонов EXP-скриптов (по умолчанию: exp_templates)",
+	},
+
 	// Redis配置相关
 	"flag_redis_file": {
 		LangZH: "指定Redis写入的SSH公钥文件",

@@ -146,6 +146,11 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 
 					// 输出成功日志
 					Common.LogSuccess(logMsg)
+
+					// 生成EXP脚本模板（如果启用了EXP生成功能）
+					if Common.EnableExpGeneration {
+						GenerateExpFromPoc(task.Req.URL.String(), task.Poc, vulName, exploitParams)
+					}
 				}
 			}
 		}()
@@ -642,6 +647,11 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 
 		// 输出成功日志
 		Common.LogSuccess(logMsg)
+
+		// 生成EXP脚本模板（如果启用了EXP生成功能）
+		if Common.EnableExpGeneration {
+			GenerateExpFromPoc(targetURL, p, p.Name, params)
+		}
 	}
 
 	// 遍历POC规则

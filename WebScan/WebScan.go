@@ -45,7 +45,14 @@ var (
 // WebScan 执行Web漏洞扫描
 func WebScan(info *Common.HostInfo) {
 	// 初始化POC
-	once.Do(initPocs)
+	once.Do(func() {
+		initPocs()
+		// 初始化EXP生成器（如果启用了EXP生成功能）
+		if Common.EnableExpGeneration {
+			lib.InitExpGenerator(Common.ExpOutputDir)
+			Common.LogInfo("EXP脚本模板生成功能已启用，输出目录: " + Common.ExpOutputDir)
+		}
+	})
 
 	// 验证输入
 	if info == nil {
