@@ -58,12 +58,16 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 			defer wg.Done()
 			// 从任务通道循环获取任务
 			for task := range tasks {
+				// 构建数据包收集器的key(基于目标主机)
+				packetKey := fmt.Sprintf("%s://%s", task.Req.URL.Scheme, task.Req.URL.Host)
+
 				// 执行POC检测，返回是否存在漏洞、错误信息、漏洞名称和利用参数
 				isVulnerable, err, vulName, exploitParams := executePoc(task.Req, task.Poc)
 
 				// 处理执行过程中的错误
 				if err != nil {
 					Common.LogError(fmt.Sprintf("执行POC错误 %s: %v", task.Poc.Name, err))
+					ClearPackets(packetKey) // 清理未触发漏洞的数据包缓存
 					continue
 				}
 
@@ -147,10 +151,16 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 					// 输出成功日志
 					Common.LogSuccess(logMsg)
 
+					// 保存漏洞触发时的HTTP数据包(如果启用了 -save-pcapng)
+					FlushPackets(packetKey, displayVulName)
+
 					// 生成EXP脚本模板（如果启用了EXP生成功能）
 					if Common.EnableExpGeneration {
 						GenerateExpFromPoc(task.Req.URL.String(), task.Poc, vulName, exploitParams)
 					}
+				} else {
+					// POC未触发漏洞，清理数据包缓存
+					ClearPackets(packetKey)
 				}
 			}
 		}()
@@ -647,6 +657,10 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 
 		// 输出成功日志
 		Common.LogSuccess(logMsg)
+
+		// 保存漏洞触发时的HTTP数据包(如果启用了 -save-pcapng)
+		packetKey := fmt.Sprintf("%s://%s", oReq.URL.Scheme, oReq.URL.Host)
+		FlushPackets(packetKey, p.Name)
 
 		// 生成EXP脚本模板（如果启用了EXP生成功能）
 		if Common.EnableExpGeneration {

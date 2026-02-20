@@ -7,13 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/checker/decls"
-	"github.com/google/cel-go/common/types"
-	"github.com/google/cel-go/common/types/ref"
-	"github.com/google/cel-go/interpreter/functions"
-	"github.com/shadow1ng/fscan/Common"
-	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"io"
 	"math/rand"
 	"net/http"
@@ -22,6 +15,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/interpreter/functions"
+	"github.com/shadow1ng/fscan/Common"
+	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
 
 // NewEnv 创建一个新的 CEL 环境
@@ -663,6 +664,12 @@ func RandomStr(randSource *rand.Rand, letterBytes string, n int) string {
 
 // DoRequest 执行 HTTP 请求
 func DoRequest(req *http.Request, redirect bool) (*Response, error) {
+	// 在发送请求前捕获请求体(用于数据包保存)
+	var reqBodyForCapture []byte
+	if Common.SaveHTTPPacket {
+		reqBodyForCapture = DumpRequestBody(req)
+	}
+
 	// 处理请求头
 	if req.Body != nil && req.Body != http.NoBody {
 		// 设置 Content-Length
@@ -695,6 +702,12 @@ func DoRequest(req *http.Request, redirect bool) (*Response, error) {
 	resp, err := ParseResponse(oResp)
 	if err != nil {
 		Common.LogError("响应解析失败: " + err.Error())
+	}
+
+	// 捕获请求/响应数据包(用于 -save-pcapng 功能)
+	if Common.SaveHTTPPacket && resp != nil {
+		targetKey := fmt.Sprintf("%s://%s", req.URL.Scheme, req.URL.Host)
+		CapturePacket(targetKey, req, resp, reqBodyForCapture)
 	}
 
 	return resp, err

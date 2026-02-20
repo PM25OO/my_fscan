@@ -931,6 +931,8 @@ var (
 	DisablePocScan      bool    //nopoc
 	EnableExpGeneration bool    // 是否在POC验证成功后自动生成EXP脚本模板
 	ExpOutputDir        string  // EXP脚本模板输出目录
+	SaveHTTPPacket      bool    // 是否保存漏洞触发时的HTTP请求/响应包
+	PacketOutputDir     string  // HTTP请求/响应包保存目录
 
 	// Redis利用
 	RedisFile         string // Redis利用目标文件

@@ -531,6 +531,48 @@ var i18nMap = map[string]map[string]string{
 		LangRU: "Каталог для вывода шаблонов EXP-скриптов (по умолчанию: exp_templates)",
 	},
 
+	"flag_save_packet": {
+		LangZH: "保存漏洞触发时的HTTP请求/响应包到本地文件",
+		LangEN: "Save HTTP request/response packets to local files when vulnerabilities are triggered",
+		LangJA: "脆弱性トリガー時にHTTPリクエスト/レスポンスパケットをローカルファイルに保存",
+		LangRU: "Сохранять HTTP-пакеты запросов/ответов в локальные файлы при обнаружении уязвимостей",
+	},
+
+	"flag_packet_dir": {
+		LangZH: "HTTP请求/响应包保存目录(默认: packets)",
+		LangEN: "HTTP packet save directory (default: packets)",
+		LangJA: "HTTPパケット保存ディレクトリ（デフォルト: packets）",
+		LangRU: "Каталог для сохранения HTTP-пакетов (по умолчанию: packets)",
+	},
+
+	"packet_init_dir_failed": {
+		LangZH: "创建数据包保存目录失败: %v",
+		LangEN: "Failed to create packet save directory: %v",
+		LangJA: "パケット保存ディレクトリの作成に失敗: %v",
+		LangRU: "Не удалось создать каталог для сохранения пакетов: %v",
+	},
+
+	"packet_init_success": {
+		LangZH: "HTTP数据包保存已启用, 输出目录: %s",
+		LangEN: "HTTP packet saving enabled, output directory: %s",
+		LangJA: "HTTPパケット保存が有効、出力ディレクトリ: %s",
+		LangRU: "Сохранение HTTP-пакетов включено, каталог: %s",
+	},
+
+	"packet_save_failed": {
+		LangZH: "数据包保存失败 %s: %v",
+		LangEN: "Failed to save packet %s: %v",
+		LangJA: "パケットの保存に失敗 %s: %v",
+		LangRU: "Не удалось сохранить пакет %s: %v",
+	},
+
+	"packet_save_success": {
+		LangZH: "漏洞数据包已保存: %s",
+		LangEN: "Vulnerability packet saved: %s",
+		LangJA: "脆弱性パケットが保存されました: %s",
+		LangRU: "Пакет уязвимости сохранён: %s",
+	},
+
 	// Redis配置相关
 	"flag_redis_file": {
 		LangZH: "指定Redis写入的SSH公钥文件",

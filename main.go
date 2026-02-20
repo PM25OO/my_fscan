@@ -26,6 +26,11 @@ func main() {
 	}
 	defer Common.CloseOutput()
 
+	// 初始化HTTP数据包保存器(如果启用了 -save-pcapng)
+	if err := Common.InitPacketSaver(); err != nil {
+		Common.LogError(fmt.Sprintf("初始化数据包保存器失败: %v", err))
+	}
+
 	// 执行 CLI 扫描逻辑
 	Core.Scan(Info)
 }
