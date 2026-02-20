@@ -1,4 +1,5 @@
 # Fscan 
+[二次开发-新功能][url-feat]
 [English][url-docen]
 
 # 0x01 简介
@@ -140,3 +141,4 @@ https://github.com/k8gege/LadonGo
 https://github.com/jjf012/gopoc
 
 [url-docen]: README_EN.md
+[url-feat]: illustration.md
