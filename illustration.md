@@ -6,11 +6,11 @@
 
 ### prompts
 
-![image-image01](image\image01.png)
+![image-image01](image/image01.png)
 
 ### 运行效果
 
-![image-image02](image\image02.png)
+![image-image02](image/image02.png)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### prompts
 
-![image-20260213190324694](image\image03.png)
+![image-20260213190324694](image/image03.png)
 
 ### 使用方法
 
@@ -32,7 +32,7 @@ fscan -h 192.168.1.1 -expgen -expdir ./my_exploits
 
 ### 运行效果
 
-![image-20260213194658016](image\image04.png)
+![image-20260213194658016](image/image04.png)
 
 ```python
 #!/usr/bin/env python3
@@ -229,7 +229,7 @@ if __name__ == "__main__":
 
 ### prompts
 
-![image-20260215162719290](image\image05.png)
+![image-20260215162719290](image/image05.png)
 
 ## 使用方法
 
@@ -243,7 +243,7 @@ fscan -h 192.168.1.0/24 -save-pcapng -packetdir ./my_packets
 
 ### 运行效果
 
-![image-20260215163054221](image\image06.png)
+![image-20260215163054221](image/image06.png)
 
 ```
 # 漏洞数据包记录
